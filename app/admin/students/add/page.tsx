@@ -10,6 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { useToast } from "@/hooks/use-toast"
+import { BrandTelegram } from "@/components/icons/brand-telegram"
 
 export default function AddStudentPage() {
   const [formData, setFormData] = useState({
@@ -48,6 +49,12 @@ export default function AddStudentPage() {
         return
       }
 
+      // Проверка формата Telegram username
+      let telegramUsername = formData.telegramUsername
+      if (!telegramUsername.startsWith("@") && telegramUsername.trim() !== "") {
+        telegramUsername = "@" + telegramUsername
+      }
+
       // Отправка данных на сервер
       const response = await fetch("/api/students", {
         method: "POST",
@@ -57,7 +64,7 @@ export default function AddStudentPage() {
         body: JSON.stringify({
           name: formData.name,
           email: formData.email,
-          telegramUsername: formData.telegramUsername,
+          telegramUsername: telegramUsername,
         }),
       })
 
@@ -65,7 +72,7 @@ export default function AddStudentPage() {
         toast({
           title: "Ученица добавлена",
           description: formData.sendInvitation
-            ? `Приглашение отправлено в Telegram ${formData.telegramUsername}`
+            ? `Приглашение отправлено в Telegram ${telegramUsername}`
             : `${formData.name} добавлена без отправки приглашения`,
         })
         router.push("/admin/students")
@@ -115,7 +122,10 @@ export default function AddStudentPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="telegramUsername">Telegram</Label>
+              <Label htmlFor="telegramUsername" className="flex items-center gap-2">
+                <BrandTelegram className="h-4 w-4 text-[#0088cc]" />
+                Telegram
+              </Label>
               <Input
                 id="telegramUsername"
                 name="telegramUsername"
@@ -124,6 +134,7 @@ export default function AddStudentPage() {
                 placeholder="@username"
                 required
               />
+              <p className="text-xs text-[#6b6b6b]">Укажите username в Telegram для связи с ученицей</p>
             </div>
 
             <div className="space-y-2">

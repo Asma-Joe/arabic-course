@@ -31,6 +31,10 @@ export default function DashboardHeader({ userName, isAdmin = false }: { userNam
       })
 
       if (response.ok) {
+        toast({
+          title: "Выход выполнен",
+          description: "Вы успешно вышли из системы",
+        })
         router.push("/login")
       } else {
         toast({

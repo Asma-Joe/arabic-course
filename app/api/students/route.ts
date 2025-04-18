@@ -1,9 +1,15 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { getStudents, addStudent, type Student } from "@/lib/db"
+import { getUsers, addUser } from "@/lib/storage"
 
 export async function GET() {
-  const students = getStudents()
-  return NextResponse.json(students)
+  try {
+    const users = getUsers()
+    const students = users.filter((user) => user.role === "student")
+    return NextResponse.json(students)
+  } catch (error) {
+    console.error("Error fetching students:", error)
+    return NextResponse.json({ error: "Ошибка при получении списка учениц" }, { status: 500 })
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -11,22 +17,27 @@ export async function POST(request: NextRequest) {
     const data = await request.json()
 
     // Проверка обязательных полей
-    if (!data.name || !data.telegramUsername) {
-      return NextResponse.json({ error: "Имя и Telegram обязательны" }, { status: 400 })
+    if (!data.name || !data.email) {
+      return NextResponse.json({ error: "Имя и Email обязательны" }, { status: 400 })
+    }
+
+    // Проверка, что пользователь с таким email не существует
+    const users = getUsers()
+    const existingUser = users.find((user) => user.email === data.email)
+    if (existingUser) {
+      return NextResponse.json({ error: "Пользователь с таким email уже существует" }, { status: 400 })
     }
 
     // Создание новой ученицы
-    const newStudent: Omit<Student, "id"> = {
+    const newUser = addUser({
       name: data.name,
-      email: data.email || "",
-      telegramUsername: data.telegramUsername,
-      progress: 0,
-      lastActive: new Date().toISOString(),
-      status: "active",
-    }
+      email: data.email,
+      telegramUsername: data.telegramUsername || "",
+      role: "student",
+      password: data.password || "password123", // В реальном приложении генерировать безопасный пароль
+    })
 
-    const student = addStudent(newStudent)
-    return NextResponse.json(student, { status: 201 })
+    return NextResponse.json(newUser, { status: 201 })
   } catch (error) {
     console.error("Error creating student:", error)
     return NextResponse.json({ error: "Ошибка при создании ученицы" }, { status: 500 })

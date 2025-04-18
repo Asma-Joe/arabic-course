@@ -1,51 +1,40 @@
-let userConfig = undefined
-try {
-  // try to import ESM first
-  userConfig = await import('./v0-user-next.config.mjs')
-} catch (e) {
-  try {
-    // fallback to CJS import
-    userConfig = await import("./v0-user-next.config");
-  } catch (innerError) {
-    // ignore error
-  }
-}
-
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  reactStrictMode: true,
+  poweredByHeader: false, // Скрываем заголовок X-Powered-By для безопасности
+  
+  // Настройки для изображений
+  images: {
+    domains: ['your-domain.com'],
+    formats: ['image/avif', 'image/webp'],
+    unoptimized: true,
+  },
+  
+  // Настройки для перенаправлений
+  async redirects() {
+    return [
+      {
+        source: '/admin',
+        destination: '/admin/page',
+        permanent: true,
+      },
+      {
+        source: '/dashboard',
+        destination: '/dashboard/page',
+        permanent: true,
+      },
+    ]
+  },
+  
+  // Игнорирование ошибок ESLint при сборке
   eslint: {
     ignoreDuringBuilds: true,
   },
+  
+  // Игнорирование ошибок TypeScript при сборке
   typescript: {
     ignoreBuildErrors: true,
   },
-  images: {
-    unoptimized: true,
-  },
-  experimental: {
-    webpackBuildWorker: true,
-    parallelServerBuildTraces: true,
-    parallelServerCompiles: true,
-  },
-}
-
-if (userConfig) {
-  // ESM imports will have a "default" property
-  const config = userConfig.default || userConfig
-
-  for (const key in config) {
-    if (
-      typeof nextConfig[key] === 'object' &&
-      !Array.isArray(nextConfig[key])
-    ) {
-      nextConfig[key] = {
-        ...nextConfig[key],
-        ...config[key],
-      }
-    } else {
-      nextConfig[key] = config[key]
-    }
-  }
 }
 
 export default nextConfig

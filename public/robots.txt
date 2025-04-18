@@ -1,0 +1,13 @@
+# Разрешаем индексацию публичных страниц
+User-agent: *
+Allow: /
+Allow: /register
+Allow: /login
+
+# Запрещаем индексацию административных и приватных страниц
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /api/
+
+# Указываем путь к sitemap (добавим его позже)
+Sitemap: https://your-domain.com/sitemap.xml

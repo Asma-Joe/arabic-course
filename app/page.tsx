@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import Link from "next/link"
+import { BellIcon as BrandTelegram } from "lucide-react"
 
 export default function Home() {
   return (
@@ -11,9 +12,16 @@ export default function Home() {
             <div className="text-4xl font-bold mr-2 text-[#8a6552]">كن</div>
             <h1 className="text-2xl font-semibold text-[#4a4a4a]">Арабский с нуля для дам</h1>
           </div>
-          <div>
-            <Button asChild className="bg-[#8a6552] hover:bg-[#6d503f] text-white">
+          <div className="flex gap-2">
+            <Button
+              asChild
+              variant="outline"
+              className="border-[#8a6552] text-[#8a6552] hover:bg-[#8a6552] hover:text-white"
+            >
               <Link href="/login">Войти</Link>
+            </Button>
+            <Button asChild className="bg-[#8a6552] hover:bg-[#6d503f] text-white">
+              <Link href="/register">Получить приглашение</Link>
             </Button>
           </div>
         </header>
@@ -30,14 +38,41 @@ export default function Home() {
                 Наш курс предлагает структурированный подход к обучению с еженедельными видеоуроками, практическими
                 заданиями и персональной обратной связью.
               </p>
-              <Button asChild className="bg-[#8a6552] hover:bg-[#6d503f] text-white">
-                <Link href="/register">Получить приглашение</Link>
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button asChild className="bg-[#8a6552] hover:bg-[#6d503f] text-white">
+                  <Link href="/register">Получить приглашение</Link>
+                </Button>
+                <Button
+                  asChild
+                  variant="outline"
+                  className="flex items-center gap-2 border-[#0088cc] text-[#0088cc] hover:bg-[#0088cc] hover:text-white"
+                >
+                  <Link href="https://t.me/Studywithmearabic" target="_blank" rel="noopener noreferrer">
+                    <BrandTelegram className="h-5 w-5" />
+                    Написать в Telegram
+                  </Link>
+                </Button>
+              </div>
             </div>
             <Card className="overflow-hidden border-none shadow-lg">
               <CardContent className="p-0">
-                <div className="aspect-video bg-[#e9e2dc] flex items-center justify-center">
-                  <p className="text-[#8a6552] text-xl font-medium">Демонстрация курса</p>
+                <div className="relative aspect-video overflow-hidden rounded-md">
+                  {/* Вариант 1: Встроенное видео с YouTube */}
+                  <iframe
+                    className="absolute inset-0 w-full h-full"
+                    src="https://www.youtube.com/embed/sVIcJlbdUxw"
+                    title="Арабский с нуля для дам: легко, интересно, быстро"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  ></iframe>
+
+                  {/* Вариант 2: Красивое изображение (раскомментируйте и закомментируйте iframe выше) */}
+                  {/* <div className="absolute inset-0 w-full h-full bg-[#e9e2dc] flex items-center justify-center">
+                    <div className="text-center">
+                      <div className="text-6xl font-bold mb-4 text-[#8a6552]">كن</div>
+                      <p className="text-xl text-[#4a4a4a]">Изучайте арабский с нуля</p>
+                    </div>
+                  </div> */}
                 </div>
               </CardContent>
             </Card>
@@ -79,8 +114,9 @@ export default function Home() {
               Доступ к курсу предоставляется только по приглашению. Напишите нам в Telegram, чтобы получить доступ к
               курсу.
             </p>
-            <Button asChild className="bg-[#8a6552] hover:bg-[#6d503f] text-white">
-              <Link href="https://t.me/your_telegram_username" target="_blank" rel="noopener noreferrer">
+            <Button asChild className="bg-[#0088cc] hover:bg-[#0077b5] text-white flex items-center gap-2 mx-auto">
+              <Link href="https://t.me/Studywithmearabic" target="_blank" rel="noopener noreferrer">
+                <BrandTelegram className="h-5 w-5" />
                 Написать в Telegram
               </Link>
             </Button>
@@ -95,7 +131,23 @@ export default function Home() {
                 <span className="text-sm">Арабский с нуля для дам</span>
               </div>
             </div>
-            <div className="text-sm">© {new Date().getFullYear()} Все права защищены</div>
+            <div className="flex items-center gap-4">
+              <Link
+                href="https://t.me/Studywithmearabic"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#0088cc] hover:underline flex items-center gap-1"
+              >
+                <BrandTelegram className="h-4 w-4" />
+                <span>Telegram</span>
+              </Link>
+              <div className="text-sm">© {new Date().getFullYear()} Все права защищены</div>
+            </div>
+          </div>
+          <div className="text-center mt-4 text-xs text-[#6b6b6b]">
+            <Link href="/direct-login" className="hover:underline">
+              Прямой вход для администратора
+            </Link>
           </div>
         </footer>
       </div>

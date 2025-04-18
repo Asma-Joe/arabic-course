@@ -36,41 +36,47 @@ export default function EditLessonPage({ params }: { params: { id: string } }) {
   const { toast } = useToast()
   const router = useRouter()
 
-  // Имитация загрузки данных урока
+  // Загрузка данных урока
   useEffect(() => {
-    // В реальном приложении здесь был бы API-запрос для получения данных урока
-    setTimeout(() => {
-      // Пример данных урока
-      const lessonData = {
-        title: `Урок ${lessonId}: ${getLessonTitle(lessonId)}`,
-        description: `Описание урока ${lessonId}. В этом уроке вы изучите основные концепции и практические примеры.`,
-        videoUrl: "https://www.youtube.com/embed/dQw4w9WgXcQ",
-        publishStatus: lessonId <= 8 ? "published" : lessonId <= 10 ? "scheduled" : "draft",
-        publishDate: new Date(),
+    const fetchLesson = async () => {
+      try {
+        const response = await fetch(`/api/lessons/${lessonId}`)
+
+        if (response.ok) {
+          const lessonData = await response.json()
+          setFormData({
+            title: lessonData.title || "",
+            description: lessonData.description || "",
+            videoUrl: lessonData.videoUrl || "",
+            publishStatus: lessonData.status || "draft",
+            publishDate: new Date(lessonData.publishDate || new Date()),
+          })
+          setDate(new Date(lessonData.publishDate || new Date()))
+          setIsLoadingData(false)
+        } else {
+          // Если урок не найден, создаем новый
+          setFormData({
+            title: `Урок ${lessonId}`,
+            description: `Описание урока ${lessonId}`,
+            videoUrl: "",
+            publishStatus: "draft",
+            publishDate: new Date(),
+          })
+          setIsLoadingData(false)
+        }
+      } catch (error) {
+        console.error("Error fetching lesson:", error)
+        toast({
+          title: "Ошибка",
+          description: "Не удалось загрузить данные урока",
+          variant: "destructive",
+        })
+        setIsLoadingData(false)
       }
-
-      setFormData(lessonData)
-      setIsLoadingData(false)
-    }, 1000)
-  }, [lessonId])
-
-  function getLessonTitle(id: number) {
-    const titles: { [key: number]: string } = {
-      1: "Арабский алфавит (часть 1)",
-      2: "Арабский алфавит (часть 2)",
-      3: "Арабский алфавит (часть 3)",
-      4: "Приветствия и знакомство",
-      5: "Базовые фразы",
-      6: "Числительные от 1 до 10",
-      7: "Местоимения",
-      8: "Глаголы настоящего времени",
-      9: "Вопросительные предложения",
-      10: "Семья и родственники",
-      11: "Дни недели",
-      12: "Месяцы и времена года",
     }
-    return titles[id] || `Урок ${id}`
-  }
+
+    fetchLesson()
+  }, [lessonId, toast])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target
@@ -104,20 +110,54 @@ export default function EditLessonPage({ params }: { params: { id: string } }) {
     e.preventDefault()
     setIsLoading(true)
 
-    // Имитация API-запроса для обновления урока
-    setTimeout(() => {
-      setIsLoading(false)
-      toast({
-        title: "Урок обновлен",
-        description:
-          formData.publishStatus === "published"
-            ? "Урок успешно опубликован"
-            : formData.publishStatus === "scheduled"
-              ? `Урок запланирован на ${format(formData.publishDate, "d MMMM yyyy", { locale: ru })}`
-              : "Урок сохранен как черновик",
+    try {
+      // Подготовка данных для отправки
+      const lessonData = {
+        title: formData.title,
+        description: formData.description,
+        videoUrl: formData.videoUrl,
+        status: formData.publishStatus,
+        publishDate: formData.publishDate.toISOString(),
+      }
+
+      // Отправка данных на сервер
+      const response = await fetch(`/api/lessons/${lessonId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(lessonData),
       })
-      router.push("/admin/lessons")
-    }, 1500)
+
+      if (response.ok) {
+        toast({
+          title: "Урок обновлен",
+          description:
+            formData.publishStatus === "published"
+              ? "Урок успешно опубликован"
+              : formData.publishStatus === "scheduled"
+                ? `Урок запланирован на ${format(formData.publishDate, "d MMMM yyyy", { locale: ru })}`
+                : "Урок сохранен как черновик",
+        })
+        router.push("/admin/lessons")
+      } else {
+        const errorData = await response.json()
+        toast({
+          title: "Ошибка",
+          description: errorData.error || "Не удалось обновить урок",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error updating lesson:", error)
+      toast({
+        title: "Ошибка",
+        description: "Произошла ошибка при обновлении урока",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   if (isLoadingData) {
@@ -182,7 +222,12 @@ export default function EditLessonPage({ params }: { params: { id: string } }) {
                 onChange={handleChange}
                 placeholder="https://www.youtube.com/watch?v=..."
               />
-              <p className="text-sm text-[#6b6b6b]">Вставьте ссылку на видео с YouTube или загрузите видеофайл ниже</p>
+              <p className="text-sm text-[#6b6b6b]">
+                Вставьте ссылку на видео с YouTube. Например: https://www.youtube.com/watch?v=dQw4w9WgXcQ
+              </p>
+              <p className="text-sm text-[#6b6b6b]">
+                Или вставьте код для встраивания: https://www.youtube.com/embed/dQw4w9WgXcQ
+              </p>
             </div>
 
             <div className="space-y-2">

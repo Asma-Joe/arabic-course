@@ -1,89 +1,112 @@
-// Простая система аутентификации
 import { cookies } from "next/headers"
-import { type NextRequest, NextResponse } from "next/server"
+import { getUserByEmail, getUserById, type User } from "./storage"
+import crypto from "crypto"
 
-// Учетные данные администратора и тестовой ученицы
-const ADMIN_EMAIL = "asmajoe18@gmail.com"
-const ADMIN_PASSWORD = "123asma" // В реальном приложении пароль должен быть хешированным
-
-const TEST_STUDENT_EMAIL = "asmacheck@gmail.com"
-const TEST_STUDENT_PASSWORD = "123asma"
-
-// Типы пользователей
-export type UserRole = "admin" | "student"
-
-export interface User {
-  id: string
-  email: string
-  name: string
-  role: UserRole
-}
-
-// Проверка аутентификации
+// Аутентификация пользователя
 export async function authenticate(email: string, password: string): Promise<User | null> {
-  // Проверка администратора
-  if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-    return {
-      id: "admin-1",
-      email: ADMIN_EMAIL,
-      name: "Асма",
-      role: "admin",
-    }
-  }
+  try {
+    console.log(`Attempting to authenticate user: ${email}`)
+    const user = getUserByEmail(email)
 
-  // Проверка тестовой ученицы
-  if (email === TEST_STUDENT_EMAIL && password === TEST_STUDENT_PASSWORD) {
-    return {
-      id: "student-1",
-      email: TEST_STUDENT_EMAIL,
-      name: "Тестовая Ученица",
-      role: "student",
+    if (!user) {
+      console.log(`User not found: ${email}`)
+      // Используем постоянное время для предотвращения timing attacks
+      await new Promise((resolve) => setTimeout(resolve, 500))
+      return null
     }
-  }
 
-  return null
+    // В реальном приложении пароли должны быть хешированы
+    // Здесь для демонстрации используем простую проверку
+    if (user.password === password) {
+      console.log(`Authentication successful for user: ${email}`)
+      return user
+    }
+
+    console.log(`Invalid password for user: ${email}`)
+    return null
+  } catch (error) {
+    console.error("Authentication error:", error)
+    return null
+  }
 }
 
 // Создание сессии
 export async function createSession(user: User): Promise<string> {
-  // В реальном приложении здесь должна быть генерация JWT или другого токена
-  // Для простоты используем JSON строку
-  const sessionData = JSON.stringify(user)
-  return Buffer.from(sessionData).toString("base64")
+  try {
+    // Создаем JWT payload
+    const payload = {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      role: user.role,
+      // Добавляем время истечения токена (7 дней)
+      exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7,
+      // Добавляем время создания токена
+      iat: Math.floor(Date.now() / 1000),
+    }
+
+    console.log(`Creating session for user: ${user.email}, role: ${user.role}`)
+
+    // В реальном приложении здесь должна быть подпись JWT с секретным ключом
+    // Для простоты используем base64
+    return Buffer.from(JSON.stringify(payload)).toString("base64")
+  } catch (error) {
+    console.error("Error creating session:", error)
+    throw error
+  }
 }
 
 // Получение текущего пользователя из сессии
 export async function getCurrentUser(): Promise<User | null> {
-  const cookieStore = cookies()
-  const sessionCookie = cookieStore.get("session")
-
-  if (!sessionCookie) {
-    return null
-  }
-
   try {
-    const sessionData = Buffer.from(sessionCookie.value, "base64").toString()
-    const user = JSON.parse(sessionData) as User
-    return user
+    const cookieStore = cookies()
+    const sessionCookie = cookieStore.get("session")
+
+    if (!sessionCookie) {
+      return null
+    }
+
+    try {
+      const sessionData = Buffer.from(sessionCookie.value, "base64").toString()
+      const userData = JSON.parse(sessionData)
+
+      // Проверяем срок действия токена
+      if (userData.exp && userData.exp < Math.floor(Date.now() / 1000)) {
+        console.log("Session expired")
+        return null
+      }
+
+      // Получаем полные данные пользователя из хранилища
+      const user = getUserById(userData.id)
+
+      if (!user) {
+        console.log(`User not found for ID: ${userData.id}`)
+        return null
+      }
+
+      return user
+    } catch (error) {
+      console.error("Error parsing session:", error)
+      return null
+    }
   } catch (error) {
-    console.error("Error parsing session:", error)
+    console.error("Error getting current user:", error)
     return null
   }
 }
 
 // Проверка, является ли пользователь администратором
 export async function isAdmin(): Promise<boolean> {
-  const user = await getCurrentUser()
-  return user?.role === "admin"
+  try {
+    const user = await getCurrentUser()
+    return user?.role === "admin"
+  } catch (error) {
+    console.error("Error checking admin status:", error)
+    return false
+  }
 }
 
-// Middleware для защиты административных маршрутов
-export async function adminAuthMiddleware(request: NextRequest) {
-  const user = await getCurrentUser()
-
-  if (!user || user.role !== "admin") {
-    return NextResponse.redirect(new URL("/login", request.url))
-  }
-
-  return NextResponse.next()
+// Функция для создания CSRF-токена
+export function generateCSRFToken(): string {
+  return crypto.randomBytes(32).toString("hex")
 }

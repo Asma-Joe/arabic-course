@@ -8,10 +8,9 @@ import Link from "next/link"
 import { Plus, Edit, Calendar, Eye, MoreHorizontal, Trash2 } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { useToast } from "@/hooks/use-toast"
-import type { Lesson } from "@/lib/db"
 
 export default function AdminLessonsPage() {
-  const [lessons, setLessons] = useState<Lesson[]>([])
+  const [lessons, setLessons] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
 
@@ -46,7 +45,7 @@ export default function AdminLessonsPage() {
   }, [toast])
 
   // Удаление урока
-  const deleteLessonHandler = async (id: number, title: string) => {
+  const deleteLessonHandler = async (id, title) => {
     if (!confirm(`Вы уверены, что хотите удалить урок "${title}"?`)) {
       return
     }

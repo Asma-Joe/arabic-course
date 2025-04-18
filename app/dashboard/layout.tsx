@@ -3,6 +3,19 @@ import DashboardHeader from "@/components/dashboard-header"
 import { getCurrentUser } from "@/lib/auth"
 import { redirect } from "next/navigation"
 
+export const metadata = {
+  robots: {
+    index: false,
+    follow: false,
+    nocache: true,
+    googleBot: {
+      index: false,
+      follow: false,
+      noimageindex: true,
+    },
+  },
+}
+
 export default async function DashboardLayout({
   children,
 }: {
@@ -13,8 +26,11 @@ export default async function DashboardLayout({
 
   // Если пользователь не авторизован, перенаправляем на страницу входа
   if (!user) {
+    console.log("User not authenticated, redirecting to login")
     redirect("/login")
   }
+
+  console.log(`Rendering dashboard layout for user: ${user.name}, role: ${user.role}`)
 
   return (
     <div className="min-h-screen bg-[#f8f5f2]">

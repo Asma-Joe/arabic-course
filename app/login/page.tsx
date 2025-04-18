@@ -6,37 +6,80 @@ import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import Link from "next/link"
 import { useToast } from "@/hooks/use-toast"
+import { Loader2, AlertCircle } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [isLoading, setIsLoading] = useState(false)
-  const [activeTab, setActiveTab] = useState("teacher")
+  const [activeTab, setActiveTab] = useState("student") // По умолчанию вкладка "Ученица"
+  const [loginError, setLoginError] = useState<string | null>(null)
   const router = useRouter()
   const { toast } = useToast()
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Определяем, находимся ли мы в режиме разработки
+  const isDevelopment = process.env.NODE_ENV === "development"
+
+  // Функция для заполнения тестовыми данными (только в режиме разработки)
+  const fillTestData = () => {
+    if (activeTab === "teacher") {
+      setEmail("asmajoe18@gmail.com")
+      setPassword("123asma")
+    } else {
+      setEmail("asmacheck@gmail.com")
+      setPassword("123asma")
+    }
+  }
+
+  // Обработчик входа
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
+    setLoginError(null)
+
+    // Проверяем, что email и пароль не пустые
+    if (!email || !password) {
+      setLoginError("Email и пароль обязательны")
+      setIsLoading(false)
+      return
+    }
 
     try {
+      // Отправляем запрос на сервер
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ email, password }),
+        cache: "no-store", // Отключаем кеширование
       })
 
-      const data = await response.json()
+      let data
+      try {
+        // Пытаемся получить JSON из ответа
+        data = await response.json()
+      } catch (error) {
+        console.error("Error parsing response:", error)
+        setLoginError("Сервер вернул неверный формат ответа")
+        setIsLoading(false)
+        return
+      }
 
       if (response.ok) {
         // Успешный вход
+        toast({
+          title: "Успешный вход",
+          description: `Добро пожаловать, ${data.user.name}!`,
+        })
+
+        // Перенаправляем пользователя в зависимости от роли
         if (data.user.role === "admin") {
           router.push("/admin")
         } else {
@@ -44,19 +87,11 @@ export default function LoginPage() {
         }
       } else {
         // Ошибка входа
-        toast({
-          title: "Ошибка входа",
-          description: data.error || "Неверный email или пароль",
-          variant: "destructive",
-        })
+        setLoginError(data.message || data.error || "Неверный email или пароль")
       }
     } catch (error) {
       console.error("Login error:", error)
-      toast({
-        title: "Ошибка",
-        description: "Произошла ошибка при входе в систему",
-        variant: "destructive",
-      })
+      setLoginError("Произошла ошибка при входе в систему")
     } finally {
       setIsLoading(false)
     }
@@ -73,7 +108,7 @@ export default function LoginPage() {
           <CardDescription className="text-[#6b6b6b]">Выберите тип аккаунта для входа</CardDescription>
         </CardHeader>
         <CardContent>
-          <Tabs defaultValue="teacher" value={activeTab} onValueChange={setActiveTab} className="w-full mb-6">
+          <Tabs defaultValue="student" value={activeTab} onValueChange={setActiveTab} className="w-full mb-6">
             <TabsList className="grid grid-cols-2 w-full">
               <TabsTrigger value="student">Ученица</TabsTrigger>
               <TabsTrigger value="teacher">Преподаватель</TabsTrigger>
@@ -86,7 +121,15 @@ export default function LoginPage() {
             </TabsContent>
           </Tabs>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          {loginError && (
+            <Alert variant="destructive" className="mb-4">
+              <AlertCircle className="h-4 w-4" />
+              <AlertTitle>Ошибка входа</AlertTitle>
+              <AlertDescription>{loginError}</AlertDescription>
+            </Alert>
+          )}
+
+          <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -114,9 +157,17 @@ export default function LoginPage() {
               />
             </div>
             <Button type="submit" className="w-full bg-[#8a6552] hover:bg-[#6d503f]" disabled={isLoading}>
-              {isLoading ? "Вход..." : "Войти"}
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Вход...
+                </>
+              ) : (
+                "Войти"
+              )}
             </Button>
           </form>
+
           <div className="mt-6 text-center text-sm">
             <p className="text-[#6b6b6b]">
               Нет доступа?{" "}
@@ -126,6 +177,20 @@ export default function LoginPage() {
             </p>
           </div>
         </CardContent>
+
+        {/* Показываем кнопку для заполнения тестовыми данными только в режиме разработки */}
+        {isDevelopment && (
+          <CardFooter>
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full border-[#8a6552] text-[#8a6552] hover:bg-[#8a6552] hover:text-white"
+              onClick={fillTestData}
+            >
+              Заполнить тестовыми данными
+            </Button>
+          </CardFooter>
+        )}
       </Card>
     </div>
   )

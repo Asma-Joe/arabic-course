@@ -1,16 +1,69 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Progress } from "@/components/ui/progress"
 import Link from "next/link"
-import { BookOpen, FileText } from "lucide-react"
+import { BookOpen, FileText, Loader2 } from "lucide-react"
+import { useToast } from "@/hooks/use-toast"
 
 export default function DashboardPage() {
-  // Данные ученицы - в реальном приложении будут загружаться из API
-  const studentData = {
-    name: "Тестовая Ученица",
+  const [studentData, setStudentData] = useState({
+    name: "",
     progress: 0,
     completedLessons: 0,
     totalLessons: 0,
     submittedHomework: 0,
+  })
+  const [isLoading, setIsLoading] = useState(true)
+  const { toast } = useToast()
+
+  // Загрузка данных ученицы
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        // Загружаем профиль пользователя
+        const profileResponse = await fetch("/api/user/profile")
+        if (!profileResponse.ok) {
+          throw new Error("Failed to fetch profile")
+        }
+        const profileData = await profileResponse.json()
+
+        // Загружаем статистику
+        const statsResponse = await fetch("/api/user/stats")
+        if (!statsResponse.ok) {
+          throw new Error("Failed to fetch stats")
+        }
+        const statsData = await statsResponse.json()
+
+        setStudentData({
+          name: profileData.name,
+          progress: statsData.progress || 0,
+          completedLessons: statsData.completedLessons || 0,
+          totalLessons: statsData.totalLessons || 0,
+          submittedHomework: statsData.submittedHomework || 0,
+        })
+      } catch (error) {
+        console.error("Error fetching dashboard data:", error)
+        toast({
+          title: "Ошибка",
+          description: "Не удалось загрузить данные",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchData()
+  }, [toast])
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-[50vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-[#8a6552]" />
+      </div>
+    )
   }
 
   return (
@@ -64,21 +117,38 @@ export default function DashboardPage() {
       <div className="grid gap-6 md:grid-cols-2">
         <Card className="border-none shadow">
           <CardHeader>
-            <CardTitle className="text-xl text-[#4a4a4a]">Начните обучение</CardTitle>
+            <CardTitle className="text-xl text-[#4a4a4a]">Последние уроки</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="bg-[#f8f5f2] p-6 rounded-lg text-center">
-              <h3 className="font-semibold text-[#8a6552] text-xl mb-3">Добро пожаловать на курс арабского языка!</h3>
-              <p className="text-[#6b6b6b] mb-4">
-                Вы только начинаете свой путь изучения арабского языка. Перейдите к урокам, чтобы начать обучение.
-              </p>
-              <Link
-                href="/dashboard/lessons"
-                className="inline-block bg-[#8a6552] text-white px-4 py-2 rounded-md hover:bg-[#6d503f] transition-colors"
-              >
-                Перейти к урокам →
-              </Link>
-            </div>
+            {studentData.totalLessons > 0 ? (
+              <div className="space-y-4">
+                <div className="p-4 border rounded-lg">
+                  <h3 className="font-medium text-[#4a4a4a] mb-1">Продолжить обучение</h3>
+                  <p className="text-sm text-[#6b6b6b] mb-2">
+                    Перейдите к урокам, чтобы продолжить изучение арабского языка
+                  </p>
+                  <Link
+                    href="/dashboard/lessons"
+                    className="inline-block bg-[#8a6552] text-white px-4 py-2 rounded-md hover:bg-[#6d503f] transition-colors"
+                  >
+                    Перейти к урокам →
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="bg-[#f8f5f2] p-6 rounded-lg text-center">
+                <h3 className="font-semibold text-[#8a6552] text-xl mb-3">Добро пожаловать на курс арабского языка!</h3>
+                <p className="text-[#6b6b6b] mb-4">
+                  Уроки будут появляться здесь по мере их публикации преподавателем.
+                </p>
+                <Link
+                  href="/dashboard/lessons"
+                  className="inline-block bg-[#8a6552] text-white px-4 py-2 rounded-md hover:bg-[#6d503f] transition-colors"
+                >
+                  Перейти к урокам →
+                </Link>
+              </div>
+            )}
           </CardContent>
         </Card>
 

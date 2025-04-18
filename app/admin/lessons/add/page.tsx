@@ -78,15 +78,11 @@ export default function AddLessonPage() {
         return
       }
 
-      // В реальном приложении здесь должна быть загрузка файлов на сервер
-      // и получение URL для видео и домашнего задания
-
-      // Для демонстрации просто создаем объект с данными урока
+      // Подготовка данных для отправки
       const lessonData = {
         title: formData.title,
         description: formData.description,
-        videoUrl: formData.videoUrl || (videoFile ? `video_${videoFile.name}` : ""),
-        homeworkUrl: homeworkFile ? `homework_${homeworkFile.name}` : "",
+        videoUrl: formData.videoUrl,
         status: formData.publishStatus,
         publishDate: formData.publishDate.toISOString(),
       }
@@ -185,7 +181,12 @@ export default function AddLessonPage() {
                 onChange={handleChange}
                 placeholder="https://www.youtube.com/watch?v=..."
               />
-              <p className="text-sm text-[#6b6b6b]">Вставьте ссылку на видео с YouTube или загрузите видеофайл ниже</p>
+              <p className="text-sm text-[#6b6b6b]">
+                Вставьте ссылку на видео с YouTube. Например: https://www.youtube.com/watch?v=dQw4w9WgXcQ
+              </p>
+              <p className="text-sm text-[#6b6b6b]">
+                Или вставьте код для встраивания: https://www.youtube.com/embed/dQw4w9WgXcQ
+              </p>
             </div>
 
             <div className="space-y-2">

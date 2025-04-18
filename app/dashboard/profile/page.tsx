@@ -2,47 +2,110 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { useToast } from "@/hooks/use-toast"
+import { Loader2 } from "lucide-react"
 
 export default function ProfilePage() {
-  // Mock data - in a real app, this would come from an API or database
+  // Состояние для хранения данных пользователя
   const [userData, setUserData] = useState({
-    name: "Анна Иванова",
-    email: "anna@example.com",
+    name: "",
+    email: "",
     currentPassword: "",
     newPassword: "",
     confirmPassword: "",
   })
 
   const [isLoading, setIsLoading] = useState(false)
+  const [isDataLoading, setIsDataLoading] = useState(true)
   const { toast } = useToast()
+
+  // Загрузка данных пользователя при монтировании компонента
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const response = await fetch("/api/user/profile")
+        if (response.ok) {
+          const data = await response.json()
+          setUserData((prevData) => ({
+            ...prevData,
+            name: data.name,
+            email: data.email,
+          }))
+        } else {
+          toast({
+            title: "Ошибка",
+            description: "Не удалось загрузить данные профиля",
+            variant: "destructive",
+          })
+        }
+      } catch (error) {
+        console.error("Error fetching user data:", error)
+        toast({
+          title: "Ошибка",
+          description: "Произошла ошибка при загрузке данных",
+          variant: "destructive",
+        })
+      } finally {
+        setIsDataLoading(false)
+      }
+    }
+
+    fetchUserData()
+  }, [toast])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
     setUserData((prev) => ({ ...prev, [name]: value }))
   }
 
-  const handleProfileUpdate = (e: React.FormEvent) => {
+  const handleProfileUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false)
-      toast({
-        title: "Профиль обновлен",
-        description: "Ваши данные успешно сохранены",
+    try {
+      const response = await fetch("/api/user/profile", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: userData.name,
+          email: userData.email,
+        }),
       })
-    }, 1500)
+
+      if (response.ok) {
+        toast({
+          title: "Профиль обновлен",
+          description: "Ваши данные успешно сохранены",
+        })
+      } else {
+        const data = await response.json()
+        toast({
+          title: "Ошибка",
+          description: data.error || "Не удалось обновить профиль",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error updating profile:", error)
+      toast({
+        title: "Ошибка",
+        description: "Произошла ошибка при обновлении профиля",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
-  const handlePasswordUpdate = (e: React.FormEvent) => {
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
 
     if (userData.newPassword !== userData.confirmPassword) {
@@ -56,20 +119,47 @@ export default function ProfilePage() {
 
     setIsLoading(true)
 
-    // Simulate API call
-    setTimeout(() => {
-      setIsLoading(false)
-      toast({
-        title: "Пароль обновлен",
-        description: "Ваш пароль успешно изменен",
+    try {
+      const response = await fetch("/api/user/password", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          currentPassword: userData.currentPassword,
+          newPassword: userData.newPassword,
+        }),
       })
-      setUserData((prev) => ({
-        ...prev,
-        currentPassword: "",
-        newPassword: "",
-        confirmPassword: "",
-      }))
-    }, 1500)
+
+      if (response.ok) {
+        toast({
+          title: "Пароль обновлен",
+          description: "Ваш пароль успешно изменен",
+        })
+        setUserData((prev) => ({
+          ...prev,
+          currentPassword: "",
+          newPassword: "",
+          confirmPassword: "",
+        }))
+      } else {
+        const data = await response.json()
+        toast({
+          title: "Ошибка",
+          description: data.error || "Не удалось обновить пароль",
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      console.error("Error updating password:", error)
+      toast({
+        title: "Ошибка",
+        description: "Произошла ошибка при обновлении пароля",
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const getInitials = (name: string) => {
@@ -79,6 +169,14 @@ export default function ProfilePage() {
       .join("")
       .toUpperCase()
       .substring(0, 2)
+  }
+
+  if (isDataLoading) {
+    return (
+      <div className="flex justify-center items-center h-[50vh]">
+        <Loader2 className="h-8 w-8 animate-spin text-[#8a6552]" />
+      </div>
+    )
   }
 
   return (
@@ -114,7 +212,14 @@ export default function ProfilePage() {
                 <Input id="email" name="email" type="email" value={userData.email} onChange={handleChange} required />
               </div>
               <Button type="submit" className="bg-[#8a6552] hover:bg-[#6d503f]" disabled={isLoading}>
-                {isLoading ? "Сохранение..." : "Сохранить изменения"}
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Сохранение...
+                  </>
+                ) : (
+                  "Сохранить изменения"
+                )}
               </Button>
             </form>
           </CardContent>
@@ -160,7 +265,14 @@ export default function ProfilePage() {
                 />
               </div>
               <Button type="submit" className="bg-[#8a6552] hover:bg-[#6d503f]" disabled={isLoading}>
-                {isLoading ? "Обновление..." : "Обновить пароль"}
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Обновление...
+                  </>
+                ) : (
+                  "Обновить пароль"
+                )}
               </Button>
             </form>
           </CardContent>

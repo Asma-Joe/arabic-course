@@ -1,42 +1,33 @@
-import { type NextRequest, NextResponse } from "next/server"
-import { getStudentById, updateStudent, deleteStudent } from "@/lib/db"
+import { NextResponse } from "next/server"
+import { getCurrentUser } from "@/lib/auth"
+import { getUserById } from "@/lib/storage"
 
-export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
-  const id = Number.parseInt(params.id)
-  const student = getStudentById(id)
-
-  if (!student) {
-    return NextResponse.json({ error: "Ученица не найдена" }, { status: 404 })
-  }
-
-  return NextResponse.json(student)
-}
-
-export async function PUT(request: NextRequest, { params }: { params: { id: string } }) {
+export async function GET(request, { params }) {
   try {
-    const id = Number.parseInt(params.id)
-    const data = await request.json()
+    const user = await getCurrentUser()
 
-    const updatedStudent = updateStudent(id, data)
-
-    if (!updatedStudent) {
-      return NextResponse.json({ error: "Ученица не найдена" }, { status: 404 })
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
     }
 
-    return NextResponse.json(updatedStudent)
+    const id = params.id
+
+    // Студент может получить только свои данные
+    if (user.role === "student" && user.id !== id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const student = getUserById(id)
+    if (!student) {
+      return NextResponse.json({ error: "Student not found" }, { status: 404 })
+    }
+
+    // Не возвращаем пароль
+    const { password, ...studentData } = student
+
+    return NextResponse.json(studentData)
   } catch (error) {
-    console.error("Error updating student:", error)
-    return NextResponse.json({ error: "Ошибка при обновлении данных ученицы" }, { status: 500 })
+    console.error("Error fetching student:", error)
+    return NextResponse.json({ error: "Failed to fetch student" }, { status: 500 })
   }
-}
-
-export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
-  const id = Number.parseInt(params.id)
-  const success = deleteStudent(id)
-
-  if (!success) {
-    return NextResponse.json({ error: "Ученица не найдена" }, { status: 404 })
-  }
-
-  return NextResponse.json({ success: true })
 }
