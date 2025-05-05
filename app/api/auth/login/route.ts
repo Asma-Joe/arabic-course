@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server"
-import { authenticate, createSession } from "@/lib/auth-memory"
+import { authenticateUser, createUserSession } from "@/lib/auth-vercel"
 import { cookies } from "next/headers"
 
 export async function POST(request: Request) {
   try {
-    // Устанавливаем заголовки CORS для отладки
+    console.log("Получен запрос на вход")
+
+    // Устанавливаем заголовки CORS
     const headers = {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "POST, OPTIONS",
@@ -12,61 +14,47 @@ export async function POST(request: Request) {
       "Content-Type": "application/json",
     }
 
-    let email = ""
-    let password = ""
+    // Парсим тело запроса
+    const body = await request.json().catch((err) => {
+      console.error("Ошибка при парсинге JSON:", err)
+      return null
+    })
 
-    try {
-      // Пытаемся получить данные из тела запроса
-      const data = await request.json()
-      email = data.email || ""
-      password = data.password || ""
-    } catch (parseError) {
-      console.error("Error parsing request body:", parseError)
-      return NextResponse.json(
-        {
-          error: "Invalid request format",
-          message: "Неверный формат запроса",
-        },
-        { status: 400, headers },
-      )
+    if (!body) {
+      console.error("Неверный формат запроса: отсутствует тело")
+      return NextResponse.json({ error: "Неверный формат запроса" }, { status: 400, headers })
     }
+
+    const { email, password } = body
 
     // Проверяем наличие обязательных полей
     if (!email || !password) {
-      return NextResponse.json(
-        {
-          error: "Email and password are required",
-          message: "Email и пароль обязательны для заполнения",
-        },
-        { status: 400, headers },
-      )
+      console.error("Отсутствуют обязательные поля")
+      return NextResponse.json({ error: "Email и пароль обязательны" }, { status: 400, headers })
     }
 
-    // Аутентификация пользователя
-    const user = authenticate(email, password)
+    // Аутентифицируем пользователя
+    const user = authenticateUser(email, password)
 
     if (!user) {
-      return NextResponse.json(
-        {
-          error: "Invalid credentials",
-          message: "Неверный email или пароль",
-        },
-        { status: 401, headers },
-      )
+      console.error("Неверные учетные данные")
+      return NextResponse.json({ error: "Неверный email или пароль" }, { status: 401, headers })
     }
 
-    // Создание сессии
-    const sessionToken = createSession(user)
+    // Создаем сессию
+    const sessionToken = createUserSession(user)
 
-    // Установка сессионного cookie
-    cookies().set("session", sessionToken, {
+    // Устанавливаем cookie
+    cookies().set({
+      name: "session",
+      value: sessionToken,
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7, // 7 дней
       path: "/",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 60 * 60 * 24 * 7, // 7 дней
     })
 
+    // Возвращаем успешный ответ
     return NextResponse.json(
       {
         success: true,
@@ -77,28 +65,35 @@ export async function POST(request: Request) {
           role: user.role,
         },
       },
-      { headers },
+      { status: 200, headers },
     )
   } catch (error) {
-    console.error("Login error:", error)
+    console.error("Ошибка при входе:", error)
     return NextResponse.json(
+      { error: "Внутренняя ошибка сервера" },
       {
-        error: "Error during login",
-        message: "Произошла ошибка при входе в систему",
+        status: 500,
+        headers: {
+          "Access-Control-Allow-Origin": "*",
+          "Access-Control-Allow-Methods": "POST, OPTIONS",
+          "Access-Control-Allow-Headers": "Content-Type",
+          "Content-Type": "application/json",
+        },
       },
-      { status: 500, headers: { "Content-Type": "application/json" } },
     )
   }
 }
 
-// Добавляем обработчик OPTIONS для CORS
+// Обработка OPTIONS запросов для CORS
 export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type",
+  return NextResponse.json(
+    {},
+    {
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type",
+      },
     },
-  })
+  )
 }
