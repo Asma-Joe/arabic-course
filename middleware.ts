@@ -4,6 +4,7 @@ import type { NextRequest } from "next/server"
 export function middleware(request: NextRequest) {
   // Получаем текущий путь
   const path = request.nextUrl.pathname
+  console.log(`Middleware обрабатывает путь: ${path}`)
 
   // Создаем базовый ответ
   const response = NextResponse.next()
@@ -32,10 +33,11 @@ export function middleware(request: NextRequest) {
 
   // Получаем сессионный cookie
   const sessionCookie = request.cookies.get("session")
+  console.log(`Сессионный cookie: ${sessionCookie ? "присутствует" : "отсутствует"}`)
 
   // Если путь требует аутентификации и нет сессии, перенаправляем на страницу входа
   if ((isAdminPath || isDashboardPath) && !sessionCookie) {
-    console.log(`Redirecting unauthenticated user from ${path} to /login`)
+    console.log(`Перенаправление неаутентифицированного пользователя с ${path} на /login`)
     return NextResponse.redirect(new URL("/login", request.url))
   }
 
@@ -44,23 +46,25 @@ export function middleware(request: NextRequest) {
     try {
       const sessionData = Buffer.from(sessionCookie.value, "base64").toString()
       const user = JSON.parse(sessionData)
+      console.log(`Пользователь: ${user.name}, роль: ${user.role}`)
 
       // Если пользователь не администратор, перенаправляем на страницу входа
       if (user.role !== "admin") {
-        console.log(`Redirecting non-admin user from ${path} to /dashboard`)
+        console.log(`Перенаправление не-администратора с ${path} на /dashboard`)
         return NextResponse.redirect(new URL("/dashboard", request.url))
       }
     } catch (error) {
       // Если возникла ошибка при разборе сессии, перенаправляем на страницу входа
-      console.error("Session parse error:", error)
+      console.error("Ошибка при разборе сессии:", error)
       return NextResponse.redirect(new URL("/login", request.url))
     }
   }
 
   // Защита API-эндпоинтов, кроме аутентификации
-  if (isApiPath && !path.startsWith("/api/auth") && !isPublicPath) {
+  if (isApiPath && !path.startsWith("/api/auth") && !path.startsWith("/api/health") && !isPublicPath) {
     // Для API-эндпоинтов, кроме аутентификации, требуем сессию
     if (!sessionCookie) {
+      console.log(`Блокировка доступа к API: ${path}`)
       return new NextResponse(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: {

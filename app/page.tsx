@@ -65,14 +65,6 @@ export default function Home() {
                     allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowFullScreen
                   ></iframe>
-
-                  {/* Вариант 2: Красивое изображение (раскомментируйте и закомментируйте iframe выше) */}
-                  {/* <div className="absolute inset-0 w-full h-full bg-[#e9e2dc] flex items-center justify-center">
-                    <div className="text-center">
-                      <div className="text-6xl font-bold mb-4 text-[#8a6552]">كن</div>
-                      <p className="text-xl text-[#4a4a4a]">Изучайте арабский с нуля</p>
-                    </div>
-                  </div> */}
                 </div>
               </CardContent>
             </Card>
@@ -145,8 +137,8 @@ export default function Home() {
             </div>
           </div>
           <div className="text-center mt-4 text-xs text-[#6b6b6b]">
-            <Link href="/direct-login" className="hover:underline">
-              Прямой вход для администратора
+            <Link href="/login" className="hover:underline">
+              Вход для учениц и преподавателя
             </Link>
           </div>
         </footer>

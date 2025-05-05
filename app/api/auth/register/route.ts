@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
-import { createUserSession } from "@/lib/auth-vercel"
 
 // Временное хранилище для новых пользователей
-const newUsers: any[] = []
+const newUsers = []
 
 export async function POST(request: Request) {
-  try {
-    console.log("Получен запрос на регистрацию")
+  console.log("Получен запрос на регистрацию")
 
+  try {
     // Устанавливаем заголовки CORS
     const headers = {
       "Access-Control-Allow-Origin": "*",
@@ -17,29 +16,22 @@ export async function POST(request: Request) {
       "Content-Type": "application/json",
     }
 
-    // Парсим тело запроса
-    const body = await request.json().catch((err) => {
-      console.error("Ошибка при парсинге JSON:", err)
-      return null
-    })
-
-    if (!body) {
-      console.error("Неверный формат запроса: отсутствует тело")
+    // Получаем данные из запроса
+    let body
+    try {
+      body = await request.json()
+      console.log("Получены данные:", body)
+    } catch (error) {
+      console.error("Ошибка при парсинге JSON:", error)
       return NextResponse.json({ error: "Неверный формат запроса" }, { status: 400, headers })
     }
 
-    const { name, email, password } = body
-
     // Проверяем наличие обязательных полей
-    if (!name || !email || !password) {
-      console.error("Отсутствуют обязательные поля")
-      return NextResponse.json({ error: "Имя, email и пароль обязательны" }, { status: 400, headers })
-    }
+    const { name, email, password } = body || {}
 
-    // Проверяем, не существует ли уже пользователь с таким email
-    const existingUser = newUsers.find((user) => user.email === email)
-    if (existingUser) {
-      return NextResponse.json({ error: "Пользователь с таким email уже существует" }, { status: 400, headers })
+    if (!name || !email || !password) {
+      console.error("Отсутствуют обязательные поля:", { name, email, password })
+      return NextResponse.json({ error: "Имя, email и пароль обязательны" }, { status: 400, headers })
     }
 
     // Создаем нового пользователя
@@ -49,18 +41,24 @@ export async function POST(request: Request) {
       email,
       password,
       role: "student",
+      telegramUsername: body.telegramUsername,
+      message: body.message,
     }
 
     // Добавляем пользователя в хранилище
     newUsers.push(newUser)
+    console.log("Новый пользователь создан:", newUser)
 
     // Создаем сессию
-    const sessionToken = createUserSession({
+    const sessionData = {
       id: newUser.id,
-      name: newUser.name,
       email: newUser.email,
+      name: newUser.name,
       role: newUser.role,
-    })
+      exp: Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 7, // 7 дней
+    }
+
+    const sessionToken = Buffer.from(JSON.stringify(sessionData)).toString("base64")
 
     // Устанавливаем cookie
     cookies().set({
@@ -87,18 +85,7 @@ export async function POST(request: Request) {
     )
   } catch (error) {
     console.error("Ошибка при регистрации:", error)
-    return NextResponse.json(
-      { error: "Внутренняя ошибка сервера" },
-      {
-        status: 500,
-        headers: {
-          "Access-Control-Allow-Origin": "*",
-          "Access-Control-Allow-Methods": "POST, OPTIONS",
-          "Access-Control-Allow-Headers": "Content-Type",
-          "Content-Type": "application/json",
-        },
-      },
-    )
+    return NextResponse.json({ error: "Внутренняя ошибка сервера" }, { status: 500 })
   }
 }
 

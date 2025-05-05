@@ -10,39 +10,52 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertCircle } from "lucide-react"
+import { AlertCircle, Loader2 } from "lucide-react"
 
 export default function LoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [debugInfo, setDebugInfo] = useState<string | null>(null)
   const router = useRouter()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    // Валидация на клиенте
+    if (!email.trim()) {
+      setError("Email обязателен для заполнения")
+      return
+    }
+
+    if (!password.trim()) {
+      setError("Пароль обязателен для заполнения")
+      return
+    }
+
     setLoading(true)
     setError(null)
-    setDebugInfo(null)
 
     try {
+      console.log("Отправляем данные:", { email, password })
+
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({ email, password }),
+        cache: "no-store",
       })
-
-      const responseText = await response.text()
-      setDebugInfo(`Статус: ${response.status}, Ответ: ${responseText}`)
 
       let data
       try {
-        data = JSON.parse(responseText)
+        const text = await response.text()
+        console.log("Ответ сервера:", text)
+        data = JSON.parse(text)
       } catch (e) {
-        setError(`Сервер вернул неверный формат ответа: ${responseText}`)
+        console.error("Ошибка парсинга ответа:", e)
+        setError("Сервер вернул неверный формат ответа")
         setLoading(false)
         return
       }
@@ -71,23 +84,25 @@ export default function LoginPage() {
     }
   }
 
-  const loginAsAdmin = async () => {
+  const loginAsAdmin = () => {
     setEmail("asmajoe18@gmail.com")
     setPassword("123asma")
 
     // Небольшая задержка для обновления состояния
     setTimeout(() => {
-      handleSubmit({ preventDefault: () => {} } as React.FormEvent)
+      const form = document.getElementById("loginForm") as HTMLFormElement
+      if (form) form.dispatchEvent(new Event("submit", { cancelable: true }))
     }, 100)
   }
 
-  const loginAsStudent = async () => {
+  const loginAsStudent = () => {
     setEmail("asmacheck@gmail.com")
     setPassword("123asma")
 
     // Небольшая задержка для обновления состояния
     setTimeout(() => {
-      handleSubmit({ preventDefault: () => {} } as React.FormEvent)
+      const form = document.getElementById("loginForm") as HTMLFormElement
+      if (form) form.dispatchEvent(new Event("submit", { cancelable: true }))
     }, 100)
   }
 
@@ -95,8 +110,11 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-[#f8f5f2] p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold text-[#8a6552]">Вход в личный кабинет</CardTitle>
-          <CardDescription>Введите свои данные для входа</CardDescription>
+          <div className="flex justify-center mb-2">
+            <div className="text-4xl font-bold text-[#8a6552]">كن</div>
+          </div>
+          <CardTitle className="text-2xl text-[#4a4a4a]">Вход в личный кабинет</CardTitle>
+          <CardDescription className="text-[#6b6b6b]">Введите свои данные для входа</CardDescription>
         </CardHeader>
         <CardContent>
           {error && (
@@ -106,7 +124,7 @@ export default function LoginPage() {
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form id="loginForm" onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -134,7 +152,14 @@ export default function LoginPage() {
               />
             </div>
             <Button type="submit" className="w-full bg-[#8a6552] hover:bg-[#6d503f]" disabled={loading}>
-              {loading ? "Вход..." : "Войти"}
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Вход...
+                </>
+              ) : (
+                "Войти"
+              )}
             </Button>
           </form>
 
@@ -169,13 +194,6 @@ export default function LoginPage() {
               </Button>
             </div>
           </div>
-
-          {debugInfo && (
-            <div className="mt-4 p-2 bg-gray-100 rounded text-xs overflow-auto max-h-32">
-              <p className="font-bold">Отладочная информация:</p>
-              <pre>{debugInfo}</pre>
-            </div>
-          )}
         </CardContent>
         <CardFooter className="flex flex-col space-y-2">
           <p className="text-center text-sm text-gray-500">
