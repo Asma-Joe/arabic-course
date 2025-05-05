@@ -24,6 +24,8 @@ export function middleware(request: NextRequest) {
     path === "/login" ||
     path === "/register" ||
     path === "/forgot-password" ||
+    path === "/login-direct" ||
+    path === "/simple-login" ||
     path.startsWith("/_next") ||
     path.startsWith("/favicon") ||
     path.includes(".") // Статические файлы
